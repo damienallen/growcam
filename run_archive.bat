@@ -1,0 +1,1 @@
+python U:\Dropbox\Make\Growcam\archive_images.py >> archive_log.txt

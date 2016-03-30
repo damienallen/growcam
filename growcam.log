@@ -1,0 +1,5 @@
+2016-03-30 21:47:13,575 - __main__ - WARNING - Succeeded after 2 attempts.
+2016-03-30 22:29:13,175 - __main__ - ERROR - Failed 0 time(s), waiting 10 seconds.
+2016-03-30 22:32:54,618 - __main__ - ERROR - Failed 0 time(s), waiting 10 seconds.
+2016-03-30 22:33:04,637 - __main__ - ERROR - Failed 1 time(s), waiting 30 seconds.
+2016-03-30 22:33:34,702 - __main__ - ERROR - Failed 2 time(s), waiting 60 seconds.
