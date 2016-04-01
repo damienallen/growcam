@@ -49,9 +49,9 @@ wait_time = [10, 30, 60, 300]
 while fail_count < 4:
 
     try:
-        if dt.hour == 0:
+        if dt.hour in [0,3,6,9,12,15,18,21] and dt.minute == 30:
             urllib.urlopen(cam_ip + '/focus')
-            sleep(5)
+            sleep(10)
             
         urllib.urlretrieve(cam_ip + '/photo.jpg', file_name)
 
