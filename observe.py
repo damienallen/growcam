@@ -14,6 +14,7 @@ import time
 import requests
 import numpy as np
 
+
 # Get auth details
 from secret import GROWLOGGER_HOST, GROWLOGGER_USERNAME, GROWLOGGER_PASSWORD
 
