@@ -1,12 +1,30 @@
-#!/usr/bin/env python
-import smbus2 as smbus
+#!/home/pi/growcam/venv/bin/python
+try:
+    from picamera import PiCamera
+    camera_available = True
+    print('\nCamera: Active')
+except ImportError:
+    camera_available = False
+    print('\nCamera: Inactive')
+
+print('Initiating bme680 sensor')
+import smbus
 import bme680
 import time
 import requests
 import numpy as np
 
+# Get auth details
+from secret import GROWLOGGER_HOST, GROWLOGGER_USERNAME, GROWLOGGER_PASSWORD
+
+# Initiate a PiCamera instance
+if camera_available:
+    camera = PiCamera()
+    camera.start_preview()
+    photo_path = '/home/pi/Desktop/capture.jpg'
+
 # Growlogger host
-HOST = 'http://192.168.2.20:8000'
+HOST = GROWLOGGER_HOST
 
 sensor = bme680.BME680()
 
@@ -31,7 +49,6 @@ sensor.set_gas_heater_temperature(320)
 sensor.set_gas_heater_duration(150)
 sensor.select_gas_heater_profile(0)
 
-
 # Calculate average over 10 seconds
 print("\n\nPolling:")
 observations = []
@@ -42,12 +59,7 @@ for n in range(0, 10):
         calibrated_temperature = raw_temperature + calibration_offset
 
         # Store data values
-        observations += [{
-            'temperature': calibrated_temperature,
-            'pressure': sensor.data.pressure,
-            'humidity': sensor.data.humidity,
-            'resistance': sensor.data.gas_resistance,
-        }]
+        observations += [[calibrated_temperature, sensor.data.pressure,sensor.data.humidity, sensor.data.gas_resistance]]
 
         # Print output
         output = "{0:.2f} C, {1:.2f} hPa, {2:.2f} %RH".format(calibrated_temperature, sensor.data.pressure, sensor.data.humidity)
@@ -57,6 +69,12 @@ for n in range(0, 10):
             print(output)
 
     time.sleep(1)
+	
+# Capture image
+if camera_available:
+    camera.rotation = 180
+    camera.capture(photo_path)
+    camera.stop_preview()
 
 # Numpy operations
 np_observations = np.array(observations)
@@ -66,8 +84,8 @@ mean_values = np_observations.mean(axis=0)
 auth_request = requests.post(
     HOST + '/api/auth/token/',
     data={
-        'username': 'damien',
-        'password': 'pass1234'
+        'username': GROWLOGGER_USERNAME,
+        'password': GROWLOGGER_PASSWORD
     }
 )
 
@@ -84,15 +102,17 @@ else:
 
 # Send observation to server
 observation_data = {
-    'temperature': mean_values[0],
-    'pressure': mean_values[1],
-    'humidity': mean_values[2],
-    'resistance': mean_values[3]
+    'temperature': round(mean_values[0], 2),
+    'pressure': round(mean_values[1], 2),
+    'humidity': round(mean_values[2], 2),
+    'resistance': int(mean_values[3]),
+    'camera_name': "Hobby Room",
+    'nir_filter': True
 }
 
+photo_file = {'file': open(photo_path, 'rb')} if camera_available else None
 observation_url = HOST + '/api/observations/'
-observation_request = requests.post(observation_url, data=observation_data, headers=auth_header)
+observation_request = requests.post(observation_url, files=photo_file, data=observation_data, headers=auth_header)
+
+print('\nResponse:')
 print(observation_request.json())
-
-
-
