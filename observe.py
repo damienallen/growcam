@@ -1,13 +1,31 @@
-#!/usr/bin/env python
+#!/home/pi/growcam/venv/bin/python
+try:
+    from picamera import PiCamera
+    camera_available = True
+    print('\nCamera: Active')
+except ImportError:
+    camera_available = False
+    print('\nCamera: Inactive')
+
 print('Initiating bme680 sensor')
-import smbus2 as smbus
+import smbus
 import bme680
 import time
 import requests
 import numpy as np
 
+
+# Get auth details
+from secret import GROWLOGGER_HOST, GROWLOGGER_USERNAME, GROWLOGGER_PASSWORD
+
+# Initiate a PiCamera instance
+if camera_available:
+    camera = PiCamera()
+    camera.start_preview()
+    photo_path = '/home/pi/Desktop/capture.jpg'
+
 # Growlogger host
-HOST = 'http://192.168.2.20:8000'
+HOST = GROWLOGGER_HOST
 
 sensor = bme680.BME680()
 
@@ -32,7 +50,6 @@ sensor.set_gas_heater_temperature(320)
 sensor.set_gas_heater_duration(150)
 sensor.select_gas_heater_profile(0)
 
-
 # Calculate average over 10 seconds
 print("\n\nPolling:")
 observations = []
@@ -53,18 +70,23 @@ for n in range(0, 10):
             print(output)
 
     time.sleep(1)
+	
+# Capture image
+if camera_available:
+    camera.rotation = 180
+    camera.capture(photo_path)
+    camera.stop_preview()
 
 # Numpy operations
 np_observations = np.array(observations)
-print(np_observations)
 mean_values = np_observations.mean(axis=0)
 
 # Get auth token from server
 auth_request = requests.post(
     HOST + '/api/auth/token/',
     data={
-        'username': 'damien',
-        'password': 'pass1234'
+        'username': GROWLOGGER_USERNAME,
+        'password': GROWLOGGER_PASSWORD
     }
 )
 
@@ -84,12 +106,14 @@ observation_data = {
     'temperature': round(mean_values[0], 2),
     'pressure': round(mean_values[1], 2),
     'humidity': round(mean_values[2], 2),
-    'resistance': int(mean_values[3])
+    'resistance': int(mean_values[3]),
+    'camera_name': "Hobby Room",
+    'nir_filter': True
 }
 
+photo_file = {'file': open(photo_path, 'rb')} if camera_available else None
 observation_url = HOST + '/api/observations/'
-observation_request = requests.post(observation_url, data=observation_data, headers=auth_header)
+observation_request = requests.post(observation_url, files=photo_file, data=observation_data, headers=auth_header)
+
+print('\nResponse:')
 print(observation_request.json())
-
-
-
